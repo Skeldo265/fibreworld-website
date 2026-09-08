@@ -8,6 +8,14 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+app.use((err, _req, res, next) => {
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    return res.status(400).json({ error: 'Request body must be valid JSON.' });
+  }
+
+  next(err);
+});
+
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
 app.use('/api/contact', contactRouter);
 

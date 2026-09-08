@@ -71,17 +71,41 @@ p {
 @keyframes fadeUp {
   from {
     opacity: 0;
-    transform: translateY(16px);
+    transform: translateY(16px) perspective(800px) rotateX(-8deg);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) perspective(800px) rotateX(0deg);
   }
 }
 
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+/* Continuous, slow 3D drift — fallback for browsers that can't tie
+   animation directly to the scrollbar (see the scroll-timeline
+   version of this same idea further down). */
+@keyframes drift3d {
+  0%, 100% {
+    transform: rotateX(0deg) rotateY(0deg) translateZ(0);
+  }
+  50% {
+    transform: rotateX(1.5deg) rotateY(2.5deg) translateZ(6px);
+  }
+}
+
+/* Scroll-mapped version: instead of looping on a timer, this maps
+   the hero photo's 3D tilt directly to how far down the page you've
+   scrolled. Bound via animation-timeline: scroll() below. */
+@keyframes heroScrollTilt {
+  from {
+    transform: rotateX(0deg) rotateY(0deg) translateZ(0) scale(1);
+  }
+  to {
+    transform: rotateX(6deg) rotateY(-9deg) translateZ(-30px) scale(0.94);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -107,16 +131,18 @@ p {
   border: 2px solid transparent;
   cursor: pointer;
   text-decoration: none;
-  transition: transform 0.18s ease, background 0.18s ease, color 0.18s ease,
-    box-shadow 0.25s ease, border-color 0.18s ease;
+  transform-style: preserve-3d;
+  transform-origin: center bottom;
+  transition: transform 0.25s ease, background 0.18s ease, color 0.18s ease,
+    box-shadow 0.3s ease, border-color 0.18s ease;
 }
 
 .btn:hover {
-  transform: translateY(-2px);
+  transform: perspective(600px) rotateX(10deg) translateY(-3px);
 }
 
 .btn:active {
-  transform: translateY(0);
+  transform: perspective(600px) rotateX(0deg) translateY(0);
   box-shadow: none;
 }
 
@@ -175,6 +201,7 @@ p {
   flex-direction: column;
   color: var(--white);
   text-decoration: none;
+  perspective: 400px;
 }
 
 .brand-mark {
@@ -183,6 +210,12 @@ p {
   font-weight: 800;
   letter-spacing: 0.5px;
   line-height: 1;
+  display: inline-block;
+  transition: transform 0.6s ease;
+}
+
+.brand:hover .brand-mark {
+  transform: rotateY(360deg);
 }
 
 .brand-mark span {
@@ -350,14 +383,15 @@ p {
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.12);
   perspective: 1200px;
+  transform-style: preserve-3d;
   transition: transform 0.5s ease, box-shadow 0.5s ease;
-  animation: fadeIn 0.9s ease both;
-  animation-delay: 0.1s;
+  animation: fadeIn 0.9s ease both, drift3d 7s ease-in-out 1s infinite;
   will-change: transform;
 }
 
 .hero-figure:hover {
-  transform: rotateX(2deg) rotateY(-3deg) translateY(-4px);
+  animation-play-state: paused;
+  transform: rotateX(3deg) rotateY(-5deg) translateY(-4px) translateZ(10px);
   box-shadow: 0 32px 60px -24px rgba(0, 0, 0, 0.55);
 }
 
@@ -485,20 +519,46 @@ p {
   color: var(--paper-2);
 }
 
-/* Gentle reveal as sections scroll into view. Supported browsers
-   (scroll-driven animations) get a soft fade/rise; everywhere else
-   just shows the content normally — no layout ever depends on this. */
+/* Reveal driven entirely by scroll position — not a timer, not a
+   hover. As each element crosses into the viewport, its own
+   progress through that crossing (animation-timeline: view()) maps
+   directly to the animation's progress. Scroll back up and it
+   reverses, exactly in step.
+
+   Split in two groups: items with their own hover-tilt (cards,
+   tags, gallery photos) only fade in on scroll — a CSS animation
+   and a hover transition can't both own `transform` on the same
+   element, so giving those a transform-based entrance would silently
+   cancel their hover tilt. Items with no conflicting hover effect
+   get the full 3D flip-up. */
 @supports (animation-timeline: view()) {
   .section-head,
   .mission-item,
   .trade-item,
-  .product-card,
-  .service-tag,
-  .gallery-item,
   .respray-banner {
-    animation: fadeUp 0.6s ease both;
+    animation: fadeUp 0.7s ease both;
     animation-timeline: view();
-    animation-range: entry 0% cover 25%;
+    animation-range: entry 0% cover 40%;
+  }
+
+  .product-card,
+  .gallery-item,
+  .service-tag {
+    animation: fadeIn 0.7s ease both;
+    animation-timeline: view();
+    animation-range: entry 0% cover 40%;
+  }
+}
+
+/* The hero photo's 3D tilt, mapped to the first stretch of page
+   scroll rather than looping on a timer. Overrides the timed
+   drift3d fallback above wherever the browser can bind an
+   animation to the scrollbar itself. */
+@supports (animation-timeline: scroll()) {
+  .hero-figure {
+    animation: fadeIn 0.9s ease both, heroScrollTilt linear both;
+    animation-timeline: auto, scroll(root block);
+    animation-range: normal, 0 70vh;
   }
 }
 
@@ -555,6 +615,7 @@ p {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 26px;
+  perspective: 1400px;
 }
 
 .product-card {
@@ -564,11 +625,12 @@ p {
   border: 1px solid var(--paper-2);
   display: flex;
   flex-direction: column;
+  transform-style: preserve-3d;
   transition: transform 0.35s ease, box-shadow 0.35s ease, border-color 0.35s ease;
 }
 
 .product-card:hover {
-  transform: translateY(-6px);
+  transform: translateY(-8px) rotateX(4deg) rotateY(-4deg);
   box-shadow: 0 24px 40px -22px rgba(27, 32, 35, 0.35);
   border-color: transparent;
 }
@@ -702,6 +764,7 @@ p {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 18px;
+  perspective: 1400px;
 }
 
 .gallery-item {
@@ -709,10 +772,12 @@ p {
   border-radius: 4px;
   overflow: hidden;
   aspect-ratio: 4 / 3;
-  transition: box-shadow 0.35s ease;
+  transform-style: preserve-3d;
+  transition: transform 0.4s ease, box-shadow 0.4s ease;
 }
 
 .gallery-item:hover {
+  transform: rotateX(3deg) rotateY(-4deg) scale(1.02);
   box-shadow: 0 22px 40px -20px rgba(0, 0, 0, 0.55);
 }
 

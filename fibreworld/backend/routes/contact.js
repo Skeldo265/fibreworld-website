@@ -42,29 +42,33 @@ async function maybeSendEmail(entry) {
     host: SMTP_HOST,
     port,
     secure: port === 465, // SSL for 465, TLS for 587
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 15000,
     auth: { user: SMTP_USER, pass: SMTP_PASS },
   });
 
   try {
     await transporter.verify();
-    console.log('✅ SMTP connection verified');
+    console.log('SMTP connection verified');
+    await transporter.sendMail({
+      from: `"Fibre World Website" <${SMTP_USER}>`,
+      to: NOTIFY_EMAIL || SMTP_USER,
+      subject: `New enquiry from ${entry.name}_${entry.service}`,
+      text: [
+        `Name: ${entry.name}`,
+        `Phone: ${entry.phone}`,
+        `Service: ${entry.service}`,
+        `Message: ${entry.message || '(none)'}`,
+        `Received: ${entry.receivedAt}`,
+      ].join('\n'),
+    });
   } catch (err) {
-    console.error('❌ SMTP connection failed:', err);
-    return;
+    console.error('SMTP connection failed:', err);
+    return false;
   }
 
-  await transporter.sendMail({
-    from: `"Fibre World Website" <${SMTP_USER}>`,
-    to: NOTIFY_EMAIL || SMTP_USER,
-    subject: `New enquiry from ${entry.name} — ${entry.service}`,
-    text: [
-      `Name: ${entry.name}`,
-      `Phone: ${entry.phone}`,
-      `Service: ${entry.service}`,
-      `Message: ${entry.message || '(none)'}`,
-      `Received: ${entry.receivedAt}`,
-    ].join('\n'),
-  });
+  return true;
 }
 
 router.post('/', async (req, res) => {
@@ -84,8 +88,11 @@ router.post('/', async (req, res) => {
 
   try {
     await saveEnquiry(entry);
-    await maybeSendEmail(entry);
     res.status(201).json({ ok: true });
+
+    void maybeSendEmail(entry).catch((err) => {
+      console.error('Failed to send enquiry email:', err);
+    });
   } catch (err) {
     console.error('Failed to handle enquiry:', err);
     res.status(500).json({ error: 'Something went wrong saving your request.' });

@@ -4,12 +4,15 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch-path=server.js --watch-path=routes --watch server.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
-    "nodemailer": "^10.0.0"
+    "nodemailer": "^6.9.14"
+  },
+  "overrides": {
+    "qs": "^6.13.0"
   }
 }
