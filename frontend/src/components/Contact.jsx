@@ -24,7 +24,8 @@ export default function Contact() {
     setStatus({ state: 'sending', message: '' });
 
     try {
-      const res = await fetch('/api/contact', {
+      const apiBase = import.meta.env.VITE_API_URL || '';
+      const res = await fetch(`${apiBase}/api/contact`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
@@ -34,7 +35,7 @@ export default function Contact() {
 
       setStatus({
         state: 'ok',
-        message: "Thanks, we've got your request and will call you back shortly.",
+        message: "Thanks — we've got your request and will call you back shortly.",
       });
       setForm(initialForm);
     } catch (err) {
