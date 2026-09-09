@@ -76,23 +76,23 @@ router.post('/', async (req, res) => {
   }
 
   const d = new Date();
-const options = { timeZone: 'Africa/Lilongwe' };
-const local = new Date(d.toLocaleString('en-US', options));
+  const options = { timeZone: 'Africa/Lilongwe' };
+  const local = new Date(d.toLocaleString('en-US', options));
 
-const months = [
-  "January","February","March","April","May","June",
-  "July","August","September","October","November","December"
-];
+  const months = [
+    "January","February","March","April","May","June",
+    "July","August","September","October","November","December"
+  ];
 
-const formatted = `${local.getDate().toString().padStart(2, '0')}-${months[local.getMonth()]}-${local.getFullYear()}, ${local.getHours().toString().padStart(2, '0')}:${local.getMinutes().toString().padStart(2, '0')}`;
+  const formatted = `${local.getDate().toString().padStart(2, '0')}-${months[local.getMonth()]}-${local.getFullYear()}, ${local.getHours().toString().padStart(2, '0')}:${local.getMinutes().toString().padStart(2, '0')}`;
 
-const entry = {
-  name: String(name).trim(),
-  phone: String(phone).trim(),
-  service: service ? String(service).trim() : 'Not specified',
-  message: message ? String(message).trim() : '',
-  receivedAt: formatted,
-};
+  const entry = {
+    name: String(name).trim(),
+    phone: String(phone).trim(),
+    service: service ? String(service).trim() : 'Not specified',
+    message: message ? String(message).trim() : '',
+    receivedAt: formatted,
+  };
 
   try {
     await saveEnquiry(entry);
