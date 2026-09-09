@@ -21,5 +21,5 @@ app.use('/api/contact', contactRouter);
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
-  console.log(`Fibre World API running on http://localhost:${PORT}`);
+  console.log(`Fibre World API running on https://fibreworld-pat-qwxh.onrender.com:${PORT}`);
 });

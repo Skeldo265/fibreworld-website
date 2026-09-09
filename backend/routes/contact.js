@@ -3,15 +3,10 @@ import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import nodemailer from 'nodemailer';
-import dotenv from 'dotenv';
 
-// Resolve __dirname for ES modules
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-// Always load backend/.env (one level up from routes/)
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
-
 const DATA_FILE = path.join(__dirname, '..', 'data', 'enquiries.json');
+
 const router = Router();
 
 async function readEnquiries() {
@@ -33,42 +28,42 @@ async function maybeSendEmail(entry) {
   const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, NOTIFY_EMAIL } = process.env;
 
   if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
-    console.warn('⚠️ SMTP not configured, skipping email.');
+    console.log(
+      '[email] Skipped — missing env var(s):',
+      [
+        !SMTP_HOST && 'SMTP_HOST',
+        !SMTP_USER && 'SMTP_USER',
+        !SMTP_PASS && 'SMTP_PASS',
+      ]
+        .filter(Boolean)
+        .join(', ')
+    );
     return;
   }
 
-  const port = Number(SMTP_PORT) || 465;
+  console.log(`[email] Attempting to send via ${SMTP_HOST} as ${SMTP_USER}...`);
+
   const transporter = nodemailer.createTransport({
     host: SMTP_HOST,
-    port,
-    secure: port === 465, // SSL for 465, TLS for 587
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 15000,
+    port: Number(SMTP_PORT) || 465,
+    secure: true,
     auth: { user: SMTP_USER, pass: SMTP_PASS },
   });
 
-  try {
-    await transporter.verify();
-    console.log('SMTP connection verified');
-    await transporter.sendMail({
-      from: `"Fibre World Website" <${SMTP_USER}>`,
-      to: NOTIFY_EMAIL || SMTP_USER,
-      subject: `New enquiry from ${entry.name}_${entry.service}`,
-      text: [
-        `Name: ${entry.name}`,
-        `Phone: ${entry.phone}`,
-        `Service: ${entry.service}`,
-        `Message: ${entry.message || '(none)'}`,
-        `Received: ${entry.receivedAt}`,
-      ].join('\n'),
-    });
-  } catch (err) {
-    console.error('SMTP connection failed:', err);
-    return false;
-  }
+  const info = await transporter.sendMail({
+    from: `"Fibre World Website" <${SMTP_USER}>`,
+    to: NOTIFY_EMAIL || SMTP_USER,
+    subject: `New enquiry from ${entry.name} — ${entry.service}`,
+    text: [
+      `Name: ${entry.name}`,
+      `Phone: ${entry.phone}`,
+      `Service: ${entry.service}`,
+      `Message: ${entry.message || '(none)'}`,
+      `Received: ${entry.receivedAt}`,
+    ].join('\n'),
+  });
 
-  return true;
+  console.log(`[email] Sent OK — messageId: ${info.messageId}`);
 }
 
 router.post('/', async (req, res) => {
@@ -88,17 +83,23 @@ router.post('/', async (req, res) => {
 
   try {
     await saveEnquiry(entry);
-    res.status(201).json({ ok: true });
-
-    void maybeSendEmail(entry).catch((err) => {
-      console.error('Failed to send enquiry email:', err);
-    });
   } catch (err) {
-    console.error('Failed to handle enquiry:', err);
-    res.status(500).json({ error: 'Something went wrong saving your request.' });
+    console.error('Failed to save enquiry:', err);
+    return res.status(500).json({ error: 'Something went wrong saving your request.' });
   }
+
+  try {
+    await maybeSendEmail(entry);
+  } catch (err) {
+    // The enquiry is already saved at this point — a broken email
+    // setup shouldn't make the form look like it failed.
+    console.error('[email] Send failed:', err.message);
+  }
+
+  res.status(201).json({ ok: true });
 });
 
+// simple listing endpoint, handy for the business owner to check enquiries
 router.get('/', async (_req, res) => {
   const all = await readEnquiries();
   res.json(all.slice().reverse());

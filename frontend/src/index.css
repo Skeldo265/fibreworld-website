@@ -61,13 +61,7 @@ p {
   padding: 0 28px;
 }
 
-/* ============================================================
-   Motion system
-   A handful of reusable keyframes plus a hard cutoff for anyone
-   who has asked their OS for reduced motion. Everything below
-   this block opts into these rather than inventing one-off
-   animations per component, so the whole site moves the same way.
-   ============================================================ */
+
 @keyframes fadeUp {
   from {
     opacity: 0;
@@ -185,8 +179,7 @@ p {
   position: sticky;
   top: 0;
   z-index: 50;
-  background: var(--charcoal);
-  border-bottom: 3px solid var(--resin);
+  background: transparent;
 }
 
 .nav .wrap {
