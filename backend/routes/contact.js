@@ -21,6 +21,7 @@ async function readEnquiries() {
 async function saveEnquiry(entry) {
   const all = await readEnquiries();
   all.push(entry);
+  await fs.mkdir(path.dirname(DATA_FILE), { recursive: true });
   await fs.writeFile(DATA_FILE, JSON.stringify(all, null, 2));
 }
 
