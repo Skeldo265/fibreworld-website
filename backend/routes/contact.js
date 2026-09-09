@@ -48,7 +48,7 @@ async function maybeSendEmail(entry) {
     body: JSON.stringify({
       from: 'Fibre World Website <onboarding@resend.dev>',
       to: [NOTIFY_EMAIL],
-      subject: `New enquiry from ${entry.name} — ${entry.service}`,
+      subject: `New enquiry from ${entry.name}_${entry.service}`,
       text: [
         `Name: ${entry.name}`,
         `Phone: ${entry.phone}`,
