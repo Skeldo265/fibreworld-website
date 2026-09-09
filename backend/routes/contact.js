@@ -2,7 +2,6 @@ import { Router } from 'express';
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import nodemailer from 'nodemailer';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_FILE = path.join(__dirname, '..', 'data', 'enquiries.json');
@@ -26,45 +25,47 @@ async function saveEnquiry(entry) {
 }
 
 async function maybeSendEmail(entry) {
-  const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, NOTIFY_EMAIL } = process.env;
+  const { RESEND_API_KEY, NOTIFY_EMAIL } = process.env;
 
-  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
+  if (!RESEND_API_KEY || !NOTIFY_EMAIL) {
     console.log(
       '[email] Skipped — missing env var(s):',
-      [
-        !SMTP_HOST && 'SMTP_HOST',
-        !SMTP_USER && 'SMTP_USER',
-        !SMTP_PASS && 'SMTP_PASS',
-      ]
+      [!RESEND_API_KEY && 'RESEND_API_KEY', !NOTIFY_EMAIL && 'NOTIFY_EMAIL']
         .filter(Boolean)
         .join(', ')
     );
     return;
   }
 
-  console.log(`[email] Attempting to send via ${SMTP_HOST} as ${SMTP_USER}...`);
+  console.log(`[email] Sending via Resend to ${NOTIFY_EMAIL}...`);
 
-  const transporter = nodemailer.createTransport({
-    host: SMTP_HOST,
-    port: Number(SMTP_PORT) || 465,
-    secure: true,
-    auth: { user: SMTP_USER, pass: SMTP_PASS },
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${RESEND_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: 'Fibre World Website <onboarding@resend.dev>',
+      to: [NOTIFY_EMAIL],
+      subject: `New enquiry from ${entry.name} — ${entry.service}`,
+      text: [
+        `Name: ${entry.name}`,
+        `Phone: ${entry.phone}`,
+        `Service: ${entry.service}`,
+        `Message: ${entry.message || '(none)'}`,
+        `Received: ${entry.receivedAt}`,
+      ].join('\n'),
+    }),
   });
 
-  const info = await transporter.sendMail({
-    from: `"Fibre World Website" <${SMTP_USER}>`,
-    to: NOTIFY_EMAIL || SMTP_USER,
-    subject: `New enquiry from ${entry.name} — ${entry.service}`,
-    text: [
-      `Name: ${entry.name}`,
-      `Phone: ${entry.phone}`,
-      `Service: ${entry.service}`,
-      `Message: ${entry.message || '(none)'}`,
-      `Received: ${entry.receivedAt}`,
-    ].join('\n'),
-  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Resend API error ${res.status}: ${body}`);
+  }
 
-  console.log(`[email] Sent OK — messageId: ${info.messageId}`);
+  const data = await res.json();
+  console.log(`[email] Sent OK — id: ${data.id}`);
 }
 
 router.post('/', async (req, res) => {
