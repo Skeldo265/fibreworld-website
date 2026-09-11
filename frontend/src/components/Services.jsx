@@ -10,7 +10,7 @@ const SERVICES = [
   'Back-to-standard',
   'Plastic welding',
   'Scratch repairs',
-  'Buffing',
+  'Polishing, Buffing and Waxing',
   'Windscreen fitments',
   'Mechanical repairs',
   'Upholstery boats & vehicles',

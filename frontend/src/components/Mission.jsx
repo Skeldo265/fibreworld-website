@@ -12,7 +12,7 @@ export default function Mission() {
       <div className="wrap">
         <div className="section-head">
           <div className="section-kicker">OUR MISSION</div>
-          <h2>What every job at Fibre World is measured against.</h2>
+          <h2>What we do.</h2>
         </div>
         <div className="mission-list">
           {PRINCIPLES.map((line) => (
